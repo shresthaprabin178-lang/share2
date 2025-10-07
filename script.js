@@ -1,11 +1,11 @@
 let stocks = JSON.parse(localStorage.getItem('stocks')) || [];
 
-// Save to localStorage
+// Save stocks to localStorage
 function saveStocks() {
     localStorage.setItem('stocks', JSON.stringify(stocks));
 }
 
-// Add new stock entry
+// Add a new stock
 function addStock() {
     let name = document.getElementById("stockName").value.toUpperCase().trim();
     const quantity = parseFloat(document.getElementById("quantity").value);
@@ -16,7 +16,6 @@ function addStock() {
         return;
     }
 
-    // Add stock object
     stocks.push({ name, quantity, wacc, ltp: 0 });
     clearInputs();
     saveStocks();
@@ -30,15 +29,12 @@ function clearInputs() {
     document.getElementById("wacc").value = "";
 }
 
-// Display stocks in table
+// Display stocks
 function displayStocks() {
     const stockList = document.getElementById("stockList");
     stockList.innerHTML = "";
 
-    let currentValue = 0;
-    let totalPL = 0;
-    let currentInvestment = 0;
-    let totalProfitLoss = 0;
+    let currentValue = 0, totalPL = 0, currentInvestment = 0, totalProfitLoss = 0;
 
     stocks.forEach((stock, index) => {
         const amount = stock.ltp * stock.quantity;
@@ -73,56 +69,46 @@ function displayStocks() {
     saveStocks();
 }
 
-// Update stock values when edited
+// Update stock when edited
 function updateStock(index, field, value) {
     const val = parseFloat(value);
-    if (isNaN(val) || val < 0) return; // ignore invalid edits
+    if (isNaN(val) || val < 0) return;
     stocks[index][field] = val;
     displayStocks();
 }
 
-// Delete a stock from list
+// Delete stock
 function deleteStock(index) {
     stocks.splice(index, 1);
     displayStocks();
 }
 
-// Sort stocks by name or by profit/loss
+// Sort stocks
 function sortStocks(field) {
-    if (field === 'name') {
-        stocks.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (field === 'profitLoss') {
-        stocks.sort((a, b) => ((b.ltp - b.wacc) * b.quantity) - ((a.ltp - a.wacc) * a.quantity));
-    }
+    if (field === 'name') stocks.sort((a,b)=>a.name.localeCompare(b.name));
+    else if (field === 'profitLoss') stocks.sort((a,b)=>((b.ltp-b.wacc)*b.quantity)-((a.ltp-a.wacc)*a.quantity));
     displayStocks();
 }
 
-// Fetch live LTP from API for each stock
+// Fetch live LTP using CORS proxy
 async function fetchLiveLTP() {
     for (let stock of stocks) {
         try {
             const symbol = stock.name;
             const url = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://nepse-test.vercel.app/api?symbol=' + symbol)}`;
             const resp = await fetch(url);
-            if (!resp.ok) {
-                console.warn("LT P fetch failed for:", symbol, resp.status);
-                continue;
-            }
+            if (!resp.ok) continue;
             const data = await resp.json();
-            // The JSON returns `current_price` field per API docs :contentReference[oaicite:2]{index=2}
-            if (data.current_price !== undefined) {
-                stock.ltp = parseFloat(data.current_price);
-            }
-        } catch (err) {
-            console.error("Error fetching live LTP for", stock.name, err);
+            stock.ltp = parseFloat(data.current_price || data.ltp || data.price || 0);
+        } catch(err) {
+            console.error("Error fetching LTP for", stock.name, err);
         }
     }
     displayStocks();
 }
 
-// Periodically update LTP every 5 seconds
+// Update LTP every 5 seconds
 setInterval(fetchLiveLTP, 5000);
 
-// On page load
+// Initial display
 displayStocks();
-
