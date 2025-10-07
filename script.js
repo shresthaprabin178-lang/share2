@@ -102,7 +102,7 @@ async function fetchLiveLTP() {
     for (let stock of stocks) {
         try {
             const symbol = stock.name;
-            const url = `https://nepse-test.vercel.app/api?symbol=${symbol}`;
+            const url = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://nepse-test.vercel.app/api?symbol=' + symbol)}`;
             const resp = await fetch(url);
             if (!resp.ok) {
                 console.warn("LT P fetch failed for:", symbol, resp.status);
@@ -125,3 +125,4 @@ setInterval(fetchLiveLTP, 5000);
 
 // On page load
 displayStocks();
+
